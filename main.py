@@ -76,6 +76,8 @@
 
 import tkinter as tk
 from tkinter import ttk
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Initialize the main application window
 root = tk.Tk()
@@ -103,11 +105,20 @@ def on_button_click():
 button = tk.Button(root, text="Greet", command=on_button_click)
 button.pack(pady=10)
 
-# Add a dropdown (combobox)
-options = ["Option 1", "Option 2", "Option 3"]
-combobox = ttk.Combobox(root, values=options, state="readonly")
-combobox.set("Select an option")
-combobox.pack(pady=10)
+
+# Create a figure for the graph
+fig = Figure(figsize=(5, 4), dpi=100)
+plot = fig.add_subplot(1, 1, 1)
+
+# Example data points
+x = [1, 2, 3, 4, 5]
+y = [10, 20, 15, 30, 25]
+plot.plot(x, y, marker='o')
+
+# Embed the figure into a Tkinter Canvas
+canvas = FigureCanvasTkAgg(fig, root)
+canvas_widget = canvas.get_tk_widget()
+canvas_widget.pack(pady=20)
 
 # Run the main event loop
 root.mainloop()
