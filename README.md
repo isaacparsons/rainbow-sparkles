@@ -18,8 +18,9 @@ sudo -E env PATH=$PATH python3 adafruit-pitft.py
 
 
 ## raspberrypi
-pip install pyqt5 --config-settings --confirm-license= --verbose
 pip install matplotlib
+
+export DISPLAY=:0.0
 
 
 # MAX6675 - thermocouple
@@ -27,7 +28,7 @@ pip install matplotlib
 # https://github.com/tdack/MAX6675/tree/master
 
 sudo apt-get update
-sudo apt-get install build-essential python-dev python-smbus
+sudo apt-get install build-essential python-dev-is-python3 python3-smbus
 
 python3 setup.py install
 
