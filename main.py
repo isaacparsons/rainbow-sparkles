@@ -24,13 +24,14 @@ max6675.set_pin(cs, sck, so, 1)
 class RealTimePlotApp:
     def __init__(self, root):
         self.root = root
+        self.root.attributes('-fullscreen', True)
         self.root.title("Real-Time Data Plotting")
 
         # Initialize data queue for thread communication
         self.data_queue = Queue()
 
         # Set up Matplotlib figure
-        self.figure = Figure(figsize=(5, 4), dpi=100)
+        self.figure = Figure(figsize=(2, 2), dpi=100)
         self.ax = self.figure.add_subplot(111)
         self.line, = self.ax.plot([], [], marker='o')
         self.ax.set_xlim(0, 20)
@@ -95,26 +96,30 @@ class RealTimePlotApp:
             self.x_data.append(len(self.x_data))  # Time step
             self.y_data.append(new_value)
 
-            # Limit data to the last 20 points
-            self.x_data = self.x_data[-20:]
-            self.y_data = self.y_data[-20:]
-
+            # Limit data to the last 5000 points
+            self.x_data = self.x_data[-5000:]
+            self.y_data = self.y_data[-5000:]
+            
             # Update the line data
-            self.line.set_xdata(self.x_data)
-            self.line.set_ydata(self.y_data)
-            self.ax.set_xlim(max(0, len(self.x_data) - 20), len(self.x_data))
+            x = self.x_data[-50:]
+            y = self.y_data[-50:]
+            self.line.set_xdata(x)
+            self.line.set_ydata(y)
+            self.ax.set_xlim(min(x), max(x))
+
+            min_y = min(y) - 5
+            max_y = max(y) + 5
+            self.ax.set_ylim(min_y, max_y)
         
         self.canvas.draw() # Redraw the canvas
         self.root.after(100, self.update_plot) # Schedule the next update
 
 
-
 class RelayController:
     def __init__(self, root):
-                            
-        
         self.root = root
         self.root.title("Relay controller")
+        self.root.attributes('-fullscreen', True)
 
         self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
         self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
