@@ -9,6 +9,10 @@ from queue import Queue
 import threading
 import time
 
+GPIO.setmode(GPIO.BOARD) 
+coil_relay_pin = 13
+GPIO.setup(coil_relay_pin, GPIO.OUT, initial = GPIO.LOW)    
+
 # set the pin for communicate with MAX6675
 cs = 38
 sck = 40
@@ -16,8 +20,6 @@ so = 36
 
 # max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
 max6675.set_pin(cs, sck, so, 1)
-
-
 
 class RealTimePlotApp:
     def __init__(self, root):
@@ -101,67 +103,34 @@ class RealTimePlotApp:
             self.line.set_xdata(self.x_data)
             self.line.set_ydata(self.y_data)
             self.ax.set_xlim(max(0, len(self.x_data) - 20), len(self.x_data))
+        
+        self.canvas.draw() # Redraw the canvas
+        self.root.after(100, self.update_plot) # Schedule the next update
 
-        # Redraw the canvas
-        self.canvas.draw()
 
-        # Schedule the next update
-        self.root.after(100, self.update_plot)
+
+class RelayController:
+    def __init__(self, root):
+                            
+        
+        self.root = root
+        self.root.title("Relay controller")
+
+        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
+        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+        
+        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay, state=tk.DISABLED)
+        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+    def open_relay(self):
+        GPIO.output(coil_relay_pin, GPIO.HIGH)
+
+    def close_relay(self):
+        GPIO.output(coil_relay_pin, GPIO.LOW)
 
 # Create and run the Tkinter app
 if __name__ == "__main__":
     root = tk.Tk()
-    app = RealTimePlotApp(root)
+    # app = RealTimePlotApp(root)
+    app = RelayController(root)
     root.mainloop()
-
-
-
-
-# try:
-#     while 1:
-#         # read temperature connected at CS 22
-#         print(max6675.read_temp(cs))
-#         max6675.time.sleep(2)
-# except KeyboardInterrupt:
-#     pass
-
-
-
-
-
-# # Initialize the main application window
-# root = tk.Tk()
-# root.title("Basic Tkinter App")
-
-# # Set the dimensions of the main window
-# root.attributes('-fullscreen', True)
-# # root.geometry("400x300")
-
-# # Add a button with a click action
-# # def on_button_click():
-# #     user_text = entry.get()
-# #     if user_text:
-# #         label.config(text=f"Hello, {user_text}!")
-# #     else:
-# #         label.config(text="Please enter your name!")
-
-# # button = tk.Button(root, text="Greet", command=on_button_click)
-# # button.pack(pady=10)
-
-
-# # Create a figure for the graph
-# fig = Figure(figsize=(5, 4), dpi=100)
-# plot = fig.add_subplot(1, 1, 1)
-
-# # Example data points
-# x = [1, 2, 3, 4, 5]
-# y = [10, 20, 15, 30, 25]
-# plot.plot(x, y, marker='o')
-
-# # Embed the figure into a Tkinter Canvas
-# canvas = FigureCanvasTkAgg(fig, root)
-# canvas_widget = canvas.get_tk_widget()
-# canvas_widget.pack(pady=20)
-
-# # Run the main event loop
-# root.mainloop()
