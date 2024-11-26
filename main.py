@@ -8,6 +8,7 @@ import max6675
 from queue import Queue
 import threading
 import time
+import RPi.GPIO as GPIO
 
 GPIO.setmode(GPIO.BOARD) 
 coil_relay_pin = 13
@@ -46,11 +47,11 @@ class RealTimePlotApp:
         self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         # Start/Stop button
-        self.start_button = tk.Button(self.root, text="Start", command=self.start_collection)
-        self.start_button.pack(side=tk.LEFT, padx=10, pady=10)
+        # self.start_button = tk.Button(self.root, text="Start", command=self.start_collection)
+        # self.start_button.pack(side=tk.LEFT, padx=10, pady=10)
         
-        self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_collection, state=tk.DISABLED)
-        self.stop_button.pack(side=tk.LEFT, padx=10, pady=10)
+        # self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_collection, state=tk.DISABLED)
+        # self.stop_button.pack(side=tk.LEFT, padx=10, pady=10)
 
         # State variables
         self.is_running = False
@@ -58,12 +59,14 @@ class RealTimePlotApp:
         self.x_data = []
         self.y_data = []
 
+        self.start_collection()
+
     def start_collection(self):
         """Start the data collection and real-time plotting."""
         if not self.is_running:
             self.is_running = True
-            self.start_button.config(state=tk.DISABLED)
-            self.stop_button.config(state=tk.NORMAL)
+            # self.start_button.config(state=tk.DISABLED)
+            # self.stop_button.config(state=tk.NORMAL)
 
             # Start the data collection thread
             self.data_thread = threading.Thread(target=self.collect_data, daemon=True)
@@ -75,8 +78,8 @@ class RealTimePlotApp:
     def stop_collection(self):
         """Stop the data collection."""
         self.is_running = False
-        self.start_button.config(state=tk.NORMAL)
-        self.stop_button.config(state=tk.DISABLED)
+        # self.start_button.config(state=tk.NORMAL)
+        # self.stop_button.config(state=tk.DISABLED)
 
     def collect_data(self):
         """Simulate data collection in a separate thread."""
@@ -124,7 +127,7 @@ class RelayController:
         self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
         self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
         
-        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay, state=tk.DISABLED)
+        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
         self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
 
     def open_relay(self):
@@ -136,6 +139,6 @@ class RelayController:
 # Create and run the Tkinter app
 if __name__ == "__main__":
     root = tk.Tk()
-    # app = RealTimePlotApp(root)
-    app = RelayController(root)
+    RealTimePlotApp(root)
+    RelayController(root)
     root.mainloop()
