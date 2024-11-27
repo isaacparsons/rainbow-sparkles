@@ -9,7 +9,18 @@ from queue import Queue
 import threading
 import time
 import RPi.GPIO as GPIO
+from smbus2 import SMBus
+from bme280 import BME280
 
+# bme 280
+bus = SMBus(1)
+bme280 = BME280(i2c_dev=bus)
+
+# exhaust control
+exhaust_relay_pin = 15
+GPIO.setup(exhaust_relay_pin, GPIO.OUT, initial = GPIO.LOW)
+
+# heating coil control
 GPIO.setmode(GPIO.BOARD) 
 coil_relay_pin = 13
 GPIO.setup(coil_relay_pin, GPIO.OUT, initial = GPIO.LOW)    
@@ -136,9 +147,33 @@ class RelayController:
     def close_relay(self):
         GPIO.output(coil_relay_pin, GPIO.LOW)
 
+class ExhaustController:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Exhaust controller")
+        self.root.attributes('-fullscreen', True)
+
+        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
+        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
+        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+    def open_relay(self):
+        GPIO.output(exhaust_relay_pin, GPIO.HIGH)
+
+    def close_relay(self):
+        GPIO.output(exhaust_relay_pin, GPIO.LOW)
 # Create and run the Tkinter app
 if __name__ == "__main__":
     root = tk.Tk()
-    RealTimePlotApp(root)
-    RelayController(root)
+    ExhaustController(root)
+    #RealTimePlotApp(root)
+    #RelayController(root)
     root.mainloop()
+    #while True:
+    #    temperature = bme280.get_temperature()
+    #    pressure = bme280.get_pressure()
+    #    humidity = bme280.get_humidity()
+    #    print(f"{temperature:05.2f}°C {pressure:05.2f}hPa {humidity:05.2f}%")
+    #    time.sleep(1)
