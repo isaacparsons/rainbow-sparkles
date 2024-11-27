@@ -33,6 +33,38 @@ so = 36
 # max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
 max6675.set_pin(cs, sck, so, 1)
 
+class RelayController(tk.Frame):
+    def __init__(self, parent, title, pin, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        
+        GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+        self.label = tk.Label(self, text=title)
+        self.label.pack()
+        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
+        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
+        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+    def open_relay(self):
+        GPIO.output(pin, GPIO.HIGH)
+
+    def close_relay(self):
+        GPIO.output(pin, GPIO.LOW)
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("app")
+        self.attributes('-fullscreen', True)
+
+        exhaust = RelayController(self, "Exhaust", exhaust_relay_pin)
+        exhaust.pack()
+
+
+
+
+
 class RealTimePlotApp:
     def __init__(self, root):
         self.root = root
@@ -129,51 +161,53 @@ class RealTimePlotApp:
         self.root.after(100, self.update_plot) # Schedule the next update
 
 
-class RelayController:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Relay controller")
-        self.root.attributes('-fullscreen', True)
+#class RelayController:
+#    def __init__(self, root):
+#        self.root = root
+#        self.root.title("Relay controller")
+#        self.root.attributes('-fullscreen', True)
 
-        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
-        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+#        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
+#        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
         
-        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
-        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+#        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
+#        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-    def open_relay(self):
-        GPIO.output(coil_relay_pin, GPIO.HIGH)
+#    def open_relay(self):
+#        GPIO.output(coil_relay_pin, GPIO.HIGH)
 
-    def close_relay(self):
-        GPIO.output(coil_relay_pin, GPIO.LOW)
+#    def close_relay(self):
+#        GPIO.output(coil_relay_pin, GPIO.LOW)
 
-class ExhaustController:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Exhaust controller")
-        self.root.attributes('-fullscreen', True)
+#class ExhaustController:
+#    def __init__(self, root):
+#        self.root = root
+#        self.root.title("Exhaust controller")
+#        self.root.attributes('-fullscreen', True)
 
-        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
-        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+#        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
+#        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
-        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+#        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
+#        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-    def open_relay(self):
-        GPIO.output(exhaust_relay_pin, GPIO.HIGH)
+#    def open_relay(self):
+#        GPIO.output(exhaust_relay_pin, GPIO.HIGH)
 
-    def close_relay(self):
-        GPIO.output(exhaust_relay_pin, GPIO.LOW)
+#    def close_relay(self):
+#        GPIO.output(exhaust_relay_pin, GPIO.LOW)
 # Create and run the Tkinter app
 if __name__ == "__main__":
-    root = tk.Tk()
-    ExhaustController(root)
+    #root = tk.Tk()
+    #ExhaustController(root)
     #RealTimePlotApp(root)
     #RelayController(root)
-    root.mainloop()
+    #root.mainloop()
     #while True:
     #    temperature = bme280.get_temperature()
     #    pressure = bme280.get_pressure()
     #    humidity = bme280.get_humidity()
     #    print(f"{temperature:05.2f}°C {pressure:05.2f}hPa {humidity:05.2f}%")
     #    time.sleep(1)
+    app = App()
+    app.mainloop()
