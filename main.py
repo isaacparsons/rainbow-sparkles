@@ -62,6 +62,8 @@ class BME280Status(tk.Frame):
         super().__init__(parent, *args, **kwargs)
         self.bme = bme280
 
+        self.is_running = False
+
         self.temperature = 0.0
         self.pressure = 0.0
         self.humidity = 0.0
@@ -75,13 +77,22 @@ class BME280Status(tk.Frame):
         self.humidity_label.grid(row=2, column=0)
  
     def update(self):
-        self.temperature = self.bme.get_temperature()
-        self.pressure = self.bme.get_pressure()
-        self.humidity = self.bme.get_humidity()
-        self.temp_label.config(text=f"Temperature: {self.temperature:05.2f}°C")
-        self.pressure_label.config(text=f"Pressure: {self.pressure:05.2f}hPa")
-        self.humidity_label.config(text=f"Humidity: {self.humidity:05.2f}%")
-        self.after(1000, self.update)
+        if self.is_running:
+            self.temperature = self.bme.get_temperature()
+            self.pressure = self.bme.get_pressure()
+            self.humidity = self.bme.get_humidity()
+            self.temp_label.config(text=f"Temperature: {self.temperature:05.2f}°C")
+            self.pressure_label.config(text=f"Pressure: {self.pressure:05.2f}hPa")
+            self.humidity_label.config(text=f"Humidity: {self.humidity:05.2f}%")
+            self.after(1000, self.update)
+
+    def start(self):
+        if not self.is_running:
+            self.is_running = True
+            self.update()
+
+    def stop(self):
+        self.is_running = False
 
 class App(tk.Tk):
     def __init__(self):
@@ -97,15 +108,20 @@ class App(tk.Tk):
         self.grid_columnconfigure(2, weight=1)
         self.grid_columnconfigure(3, weight=1)
 
-        status = Status(self)
-        exhaust = RelayController(self, "Exhaust", exhaust_relay_pin)
-        heater = RelayController(self, "Heater", coil_relay_pin)
-        tempGraph = TemperatureGraph(self)
+        self.status = Status(self)
+        self.exhaust = RelayController(self, "Exhaust", exhaust_relay_pin)
+        self.heater = RelayController(self, "Heater", coil_relay_pin)
+        self.tempGraph = TemperatureGraph(self)
+        self.bmeStatus = BME280Status(self, bme280)
 
-        status.grid(row=0, column=3, rowspan=1, stick="nsew")
-        exhaust.grid(row=1, column=3, rowspan=1, sticky="nsew")
-        heater.grid(row=2, column=3, rowspan=1, sticky="nsew")
-        tempGraph.grid(row=0, column=0, rowspan=2, columnspan=3, sticky="nsew")
+        self.status.grid(row=0, column=3, rowspan=1, stick="nsew")
+        self.exhaust.grid(row=1, column=3, rowspan=1, sticky="nsew")
+        self.heater.grid(row=2, column=3, rowspan=1, sticky="nsew")
+        self.tempGraph.grid(row=0, column=0, rowspan=2, columnspan=3, sticky="nsew")
+        self.bmeStatus.grid(row=2, column=0, rowspan=1, columnspan=2, sticky="nsew")
+
+    def start(self):
+        self.bmeStatus.start()
 
 class TemperatureGraph(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -119,9 +135,8 @@ class TemperatureGraph(tk.Frame):
         self.line, = self.ax.plot([], [], marker='o')
         self.ax.set_xlim(0, 20)
         self.ax.set_ylim(0, 100)
-        self.ax.set_title("Real-Time Plot")
-        self.ax.set_xlabel("Time Step")
-        self.ax.set_ylabel("Value")
+        self.ax.set_xlabel("Time (s)")
+        self.ax.set_ylabel("Temperature (c)")
 
         # Embed the Matplotlib figure in Tkinter
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
@@ -249,4 +264,5 @@ if __name__ == "__main__":
     #    print(f"{temperature:05.2f}°C {pressure:05.2f}hPa {humidity:05.2f}%")
     #    time.sleep(1)
     app = App()
+    app.start()
     app.mainloop()
