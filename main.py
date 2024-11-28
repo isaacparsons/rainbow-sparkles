@@ -12,18 +12,13 @@ import RPi.GPIO as GPIO
 from smbus2 import SMBus
 from bme280 import BME280
 
+GPIO.setmode(GPIO.BOARD)
 # bme 280
 bus = SMBus(1)
 bme280 = BME280(i2c_dev=bus)
 
-# exhaust control
-exhaust_relay_pin = 15
-GPIO.setup(exhaust_relay_pin, GPIO.OUT, initial = GPIO.LOW)
-
-# heating coil control
-GPIO.setmode(GPIO.BOARD) 
-coil_relay_pin = 13
-GPIO.setup(coil_relay_pin, GPIO.OUT, initial = GPIO.LOW)    
+exhaust_relay_pin = 15 # exhaust control
+coil_relay_pin = 13 # heating coil control
 
 # set the pin for communicate with MAX6675
 cs = 38
@@ -40,11 +35,11 @@ class RelayController(tk.Frame):
         GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
         self.label = tk.Label(self, text=title)
         self.label.pack()
-        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
-        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
+        self.open_button = tk.Button(self, text="Open", command=self.open_relay)
+        self.open_button.pack(side=tk.LEFT)
 
-        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
-        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
+        self.close_button = tk.Button(self, text="Close", command=self.close_relay)
+        self.close_button.pack(side=tk.LEFT)
 
     def open_relay(self):
         GPIO.output(pin, GPIO.HIGH)
@@ -52,25 +47,69 @@ class RelayController(tk.Frame):
     def close_relay(self):
         GPIO.output(pin, GPIO.LOW)
 
+class Status(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.label = tk.Label(self, text="Status")
+        self.label.pack()
+
+class TemperatureControls(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+class BME280Status(tk.Frame):
+    def __init__(self, parent, bme280,*args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.bme = bme280
+
+        self.temperature = 0.0
+        self.pressure = 0.0
+        self.humidity = 0.0
+
+        self.temp_label = tk.Label(self, text="Temperature: ")
+        self.pressure_label = tk.Label(self, text="Pressure: ")
+        self.humidity_label = tk.Label(self, text="Humidity: ") 
+
+        self.temp_label.grid(row=0, column=0)
+        self.pressure_label.grid(row=1, column=0)
+        self.humidity_label.grid(row=2, column=0)
+ 
+    def update(self):
+        self.temperature = self.bme.get_temperature()
+        self.pressure = self.bme.get_pressure()
+        self.humidity = self.bme.get_humidity()
+        self.temp_label.config(text=f"Temperature: {self.temperature:05.2f}°C")
+        self.pressure_label.config(text=f"Pressure: {self.pressure:05.2f}hPa")
+        self.humidity_label.config(text=f"Humidity: {self.humidity:05.2f}%")
+        self.after(1000, self.update)
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("app")
         self.attributes('-fullscreen', True)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=1)
+        self.grid_columnconfigure(3, weight=1)
 
+        status = Status(self)
         exhaust = RelayController(self, "Exhaust", exhaust_relay_pin)
-        exhaust.pack()
+        heater = RelayController(self, "Heater", coil_relay_pin)
+        tempGraph = TemperatureGraph(self)
 
+        status.grid(row=0, column=3, rowspan=1, stick="nsew")
+        exhaust.grid(row=1, column=3, rowspan=1, sticky="nsew")
+        heater.grid(row=2, column=3, rowspan=1, sticky="nsew")
+        tempGraph.grid(row=0, column=0, rowspan=2, columnspan=3, sticky="nsew")
 
-
-
-
-class RealTimePlotApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.attributes('-fullscreen', True)
-        self.root.title("Real-Time Data Plotting")
-
+class TemperatureGraph(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
         # Initialize data queue for thread communication
         self.data_queue = Queue()
 
@@ -85,7 +124,7 @@ class RealTimePlotApp:
         self.ax.set_ylabel("Value")
 
         # Embed the Matplotlib figure in Tkinter
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
@@ -158,7 +197,7 @@ class RealTimePlotApp:
             self.ax.set_ylim(min_y, max_y)
         
         self.canvas.draw() # Redraw the canvas
-        self.root.after(100, self.update_plot) # Schedule the next update
+        self.after(100, self.update_plot) # Schedule the next update
 
 
 #class RelayController:
