@@ -35,10 +35,11 @@ class PumpController(tk.Frame):
         super().__init__(parent, *args, **kwargs)
 
         self.pin = pin
-        self.duty_cycle = 0.5
+        self.duty_cycle = 50
         GPIO.setup(self.pin, GPIO.OUT)
-        self.pwm = GPIO.PWM(self.pin, self.duty_cycle)
-        self.label = tk.Label(self, text="Extraction pump power")
+        self.pwm = GPIO.PWM(self.pin, 100)
+        self.label = tk.Label(self, text="Extraction pump power: 50")
+
         self.label.pack()
         self.increment_btn = tk.Button(self, text="+", command=self.increment)
         self.decrement_btn = tk.Button(self, text="-", command=self.decrement)
@@ -46,23 +47,22 @@ class PumpController(tk.Frame):
         self.decrement_btn.pack(side=tk.RIGHT)
 
     def start(self):
-        self.pwm.start(0.5)
+        self.pwm.start(self.duty_cycle)
 
     def stop(self):
         self.pwm.stop()
 
     def updatePowerLevel(self, dc):
-        self.pwm.ChangeDutyCycle(dc)
+        if dc <= 100 and dc >= 0:
+            self.duty_cycle = dc
+            self.pwm.ChangeDutyCycle(self.duty_cycle)
+            self.label.config(text=f"Extraction pump power: {self.duty_cycle}")
 
     def increment(self):
-        if self.duty_cycle <= 0.9:
-            self.duty_cycle = self.duty_cycle + 0.1
-            self.pwm.ChangeDutyCycle(self.duty_cycle)
+        self.updatePowerLevel(self.duty_cycle + 10)
 
     def decrement(self):
-        if self.duty_cycle >= 0.1:
-            self.duty_cycle = self.duty_cycle - 0.1
-            self.pwm.ChangeDutyCycle(self.duty_cycle)
+        self.updatePowerLevel(self.duty_cycle - 10)
 
 class RelayController(tk.Frame):
     def __init__(self, parent, title, pin, *args, **kwargs):
