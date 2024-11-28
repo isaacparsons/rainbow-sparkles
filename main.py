@@ -19,6 +19,7 @@ bme280 = BME280(i2c_dev=bus)
 
 exhaust_relay_pin = 15 # exhaust control
 coil_relay_pin = 13 # heating coil control
+pump_pin = 12
 
 # set the pin for communicate with MAX6675
 cs = 38
@@ -28,11 +29,47 @@ so = 36
 # max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
 max6675.set_pin(cs, sck, so, 1)
 
+
+class PumpController(tk.Frame):
+    def __init__(self, parent,  pin, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        self.pin = pin
+        self.duty_cycle = 0.5
+        GPIO.setup(self.pin, GPIO.OUT)
+        self.pwm = GPIO.PWM(self.pin, self.duty_cycle)
+        self.label = tk.Label(self, text="Extraction pump power")
+        self.label.pack()
+        self.increment_btn = tk.Button(self, text="+", command=self.increment)
+        self.decrement_btn = tk.Button(self, text="-", command=self.decrement)
+        self.increment_btn.pack(side=tk.LEFT)
+        self.decrement_btn.pack(side=tk.RIGHT)
+
+    def start(self):
+        self.pwm.start(0.5)
+
+    def stop(self):
+        self.pwm.stop()
+
+    def updatePowerLevel(self, dc):
+        self.pwm.ChangeDutyCycle(dc)
+
+    def increment(self):
+        if self.duty_cycle <= 0.9:
+            self.duty_cycle = self.duty_cycle + 0.1
+            self.pwm.ChangeDutyCycle(self.duty_cycle)
+
+    def decrement(self):
+        if self.duty_cycle >= 0.1:
+            self.duty_cycle = self.duty_cycle - 0.1
+            self.pwm.ChangeDutyCycle(self.duty_cycle)
+
 class RelayController(tk.Frame):
     def __init__(self, parent, title, pin, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        
-        GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+
+        self.pin = pin        
+        GPIO.setup(self.pin, GPIO.OUT, initial=GPIO.LOW)
         self.label = tk.Label(self, text=title)
         self.label.pack()
         self.open_button = tk.Button(self, text="Open", command=self.open_relay)
@@ -42,10 +79,10 @@ class RelayController(tk.Frame):
         self.close_button.pack(side=tk.LEFT)
 
     def open_relay(self):
-        GPIO.output(pin, GPIO.HIGH)
+        GPIO.output(self.pin, GPIO.HIGH)
 
     def close_relay(self):
-        GPIO.output(pin, GPIO.LOW)
+        GPIO.output(self.pin, GPIO.LOW)
 
 class Status(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -113,15 +150,18 @@ class App(tk.Tk):
         self.heater = RelayController(self, "Heater", coil_relay_pin)
         self.tempGraph = TemperatureGraph(self)
         self.bmeStatus = BME280Status(self, bme280)
+        self.pump_control = PumpController(self, pump_pin)
 
         self.status.grid(row=0, column=3, rowspan=1, stick="nsew")
         self.exhaust.grid(row=1, column=3, rowspan=1, sticky="nsew")
         self.heater.grid(row=2, column=3, rowspan=1, sticky="nsew")
         self.tempGraph.grid(row=0, column=0, rowspan=2, columnspan=3, sticky="nsew")
         self.bmeStatus.grid(row=2, column=0, rowspan=1, columnspan=2, sticky="nsew")
+        self.pump_control.grid(row=3, column=3, rowspan=1, columnspan=1, stick="nsew")
 
     def start(self):
         self.bmeStatus.start()
+        self.pump_control.start()
 
 class TemperatureGraph(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
