@@ -4,6 +4,10 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import max6675
+from pump_controller import PumpController
+from relay_controller import RelayController
+from bme280_status import BME280Status
+from temperature_graph import TemperatureGraph
 
 from queue import Queue
 import threading
@@ -29,72 +33,6 @@ so = 36
 # max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
 max6675.set_pin(cs, sck, so, 1)
 
-
-class PumpController(tk.Frame):
-    def __init__(self, parent,  pin, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
-        self.pin = pin
-        self.duty_cycle = 0
-        GPIO.setup(self.pin, GPIO.OUT)
-        self.pwm = GPIO.PWM(self.pin, 100)
-        self.label = tk.Label(self, text="Extraction pump power: 50")
-
-        self.label.pack()
-        self.increment_btn = tk.Button(self, text="+", command=self.increment)
-        self.decrement_btn = tk.Button(self, text="-", command=self.decrement)
-        self.increment_btn.pack(side=tk.LEFT)
-        self.decrement_btn.pack(side=tk.RIGHT)
-
-    def start(self):
-        self.pwm.start(self.duty_cycle)
-
-    def stop(self):
-        self.pwm.stop()
-
-    def updatePowerLevel(self, dc):
-        if dc <= 100 and dc >= 0:
-            self.duty_cycle = dc
-            self.pwm.ChangeDutyCycle(self.duty_cycle)
-            self.label.config(text=f"Extraction pump power: {self.duty_cycle}")
-            if self.duty_cycle == 100:
-                self.increment_btn.config(state=tk.DISABLED)
-            elif self.duty_cycle == 0:
-                self.decrement_btn.config(state=tk.DISABLED)
-            else:
-                self.increment_btn.config(state=tk.NORMAL)
-                self.decrement_btn.config(state=tk.NORMAL)
-
-    def increment(self):
-        self.updatePowerLevel(self.duty_cycle + 10)
-
-    def decrement(self):
-        self.updatePowerLevel(self.duty_cycle - 10)
-
-class RelayController(tk.Frame):
-    def __init__(self, parent, title, pin, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
-        self.pin = pin        
-        GPIO.setup(self.pin, GPIO.OUT, initial=GPIO.LOW)
-        self.label = tk.Label(self, text=title)
-        self.label.pack()
-        self.open_button = tk.Button(self, text="Open", command=self.open_relay)
-        self.open_button.pack(side=tk.LEFT)
-
-        self.close_button = tk.Button(self, text="Close", command=self.close_relay, state=tk.DISABLED)
-        self.close_button.pack(side=tk.LEFT)
-
-    def open_relay(self):
-        self.open_button.config(state=tk.DISABLED)
-        self.close_button.config(state=tk.NORMAL)
-        GPIO.output(self.pin, GPIO.HIGH)
-
-    def close_relay(self):
-        self.open_button.config(state=tk.NORMAL)
-        self.close_button.config(state=tk.DISABLED)
-        GPIO.output(self.pin, GPIO.LOW)
-
 class Status(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -104,43 +42,6 @@ class Status(tk.Frame):
 class TemperatureControls(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-
-class BME280Status(tk.Frame):
-    def __init__(self, parent, bme280,*args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.bme = bme280
-
-        self.is_running = False
-
-        self.temperature = 0.0
-        self.pressure = 0.0
-        self.humidity = 0.0
-
-        self.temp_label = tk.Label(self, text="Temperature: ")
-        self.pressure_label = tk.Label(self, text="Pressure: ")
-        self.humidity_label = tk.Label(self, text="Humidity: ") 
-
-        self.temp_label.grid(row=0, column=0)
-        self.pressure_label.grid(row=1, column=0)
-        self.humidity_label.grid(row=2, column=0)
- 
-    def update(self):
-        if self.is_running:
-            self.temperature = self.bme.get_temperature()
-            self.pressure = self.bme.get_pressure()
-            self.humidity = self.bme.get_humidity()
-            self.temp_label.config(text=f"Temperature: {self.temperature:05.2f}°C")
-            self.pressure_label.config(text=f"Pressure: {self.pressure:05.2f}hPa")
-            self.humidity_label.config(text=f"Humidity: {self.humidity:05.2f}%")
-            self.after(1000, self.update)
-
-    def start(self):
-        if not self.is_running:
-            self.is_running = True
-            self.update()
-
-    def stop(self):
-        self.is_running = False
 
 class App(tk.Tk):
     def __init__(self):
@@ -173,72 +74,6 @@ class App(tk.Tk):
     def start(self):
         self.bmeStatus.start()
         self.pump_control.start()
-
-class TemperatureGraph(tk.Frame):
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.data_queue = Queue()
-
-        self.figure = Figure(figsize=(2, 2), dpi=100)
-        self.ax = self.figure.add_subplot(111)
-        self.line, = self.ax.plot([], [], marker='o')
-        self.ax.set_xlim(0, 20)
-        self.ax.set_ylim(0, 100)
-        self.ax.set_xlabel("Time (s)")
-        self.ax.set_ylabel("Temperature (c)")
-
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        self.is_running = False
-        self.data_thread = None
-        self.x_data = []
-        self.y_data = []
-
-        self.start_collection()
-
-    def start_collection(self):
-        if not self.is_running:
-            self.is_running = True
-            self.data_thread = threading.Thread(target=self.collect_data, daemon=True)
-            self.data_thread.start()
-            self.update_plot()
-
-    def stop_collection(self):
-        self.is_running = False
-
-    def collect_data(self):
-        while self.is_running:
-            time.sleep(1)
-            new_value = max6675.read_temp(cs)
-            self.data_queue.put(new_value)
-
-    def update_plot(self):
-        if not self.is_running:
-            return
-
-        while not self.data_queue.empty():
-            new_value = self.data_queue.get()
-            self.x_data.append(len(self.x_data))
-            self.y_data.append(new_value)
-
-            # Limit data to the last 5000 points
-            self.x_data = self.x_data[-5000:]
-            self.y_data = self.y_data[-5000:]
-
-            x = self.x_data[-50:]
-            y = self.y_data[-50:]
-            self.line.set_xdata(x)
-            self.line.set_ydata(y)
-            self.ax.set_xlim(min(x), max(x))
-
-            min_y = min(y) - 5
-            max_y = max(y) + 5
-            self.ax.set_ylim(min_y, max_y)
-
-        self.canvas.draw()
-        self.after(100, self.update_plot)
 
 if __name__ == "__main__":
     app = App()
