@@ -35,7 +35,7 @@ class PumpController(tk.Frame):
         super().__init__(parent, *args, **kwargs)
 
         self.pin = pin
-        self.duty_cycle = 50
+        self.duty_cycle = 0
         GPIO.setup(self.pin, GPIO.OUT)
         self.pwm = GPIO.PWM(self.pin, 100)
         self.label = tk.Label(self, text="Extraction pump power: 50")
