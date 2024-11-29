@@ -7,6 +7,16 @@ from queue import Queue
 import threading
 import time
 import RPi.GPIO as GPIO
+import max6675
+
+# set the pin for communicate with MAX6675
+cs = 38
+sck = 40
+so = 36
+
+# max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
+max6675.set_pin(cs, sck, so, 1)
+
 
 class TemperatureGraph(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
