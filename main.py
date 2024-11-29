@@ -57,6 +57,13 @@ class PumpController(tk.Frame):
             self.duty_cycle = dc
             self.pwm.ChangeDutyCycle(self.duty_cycle)
             self.label.config(text=f"Extraction pump power: {self.duty_cycle}")
+            if self.duty_cycle == 100:
+                self.increment_btn.config(state=tk.DISABLED)
+            elif self.duty_cycle == 0:
+                self.decrement_btn.config(state=tk.DISABLED)
+            else:
+                self.increment_btn.config(state=tk.NORMAL)
+                self.decrement_btn.config(state=tk.NORMAL)
 
     def increment(self):
         self.updatePowerLevel(self.duty_cycle + 10)
@@ -75,13 +82,17 @@ class RelayController(tk.Frame):
         self.open_button = tk.Button(self, text="Open", command=self.open_relay)
         self.open_button.pack(side=tk.LEFT)
 
-        self.close_button = tk.Button(self, text="Close", command=self.close_relay)
+        self.close_button = tk.Button(self, text="Close", command=self.close_relay, state=tk.DISABLED)
         self.close_button.pack(side=tk.LEFT)
 
     def open_relay(self):
+        self.open_button.config(state=tk.DISABLED)
+        self.close_button.config(state=tk.NORMAL)
         GPIO.output(self.pin, GPIO.HIGH)
 
     def close_relay(self):
+        self.open_button.config(state=tk.NORMAL)
+        self.close_button.config(state=tk.DISABLED)
         GPIO.output(self.pin, GPIO.LOW)
 
 class Status(tk.Frame):
@@ -166,10 +177,8 @@ class App(tk.Tk):
 class TemperatureGraph(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        # Initialize data queue for thread communication
         self.data_queue = Queue()
 
-        # Set up Matplotlib figure
         self.figure = Figure(figsize=(2, 2), dpi=100)
         self.ax = self.figure.add_subplot(111)
         self.line, = self.ax.plot([], [], marker='o')
@@ -178,19 +187,10 @@ class TemperatureGraph(tk.Frame):
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Temperature (c)")
 
-        # Embed the Matplotlib figure in Tkinter
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # Start/Stop button
-        # self.start_button = tk.Button(self.root, text="Start", command=self.start_collection)
-        # self.start_button.pack(side=tk.LEFT, padx=10, pady=10)
-        
-        # self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_collection, state=tk.DISABLED)
-        # self.stop_button.pack(side=tk.LEFT, padx=10, pady=10)
-
-        # State variables
         self.is_running = False
         self.data_thread = None
         self.x_data = []
@@ -199,48 +199,34 @@ class TemperatureGraph(tk.Frame):
         self.start_collection()
 
     def start_collection(self):
-        """Start the data collection and real-time plotting."""
         if not self.is_running:
             self.is_running = True
-            # self.start_button.config(state=tk.DISABLED)
-            # self.stop_button.config(state=tk.NORMAL)
-
-            # Start the data collection thread
             self.data_thread = threading.Thread(target=self.collect_data, daemon=True)
             self.data_thread.start()
-
-            # Start the real-time plot updater
             self.update_plot()
 
     def stop_collection(self):
-        """Stop the data collection."""
         self.is_running = False
-        # self.start_button.config(state=tk.NORMAL)
-        # self.stop_button.config(state=tk.DISABLED)
 
     def collect_data(self):
-        """Simulate data collection in a separate thread."""
         while self.is_running:
-            time.sleep(1)  # Simulate a delay in data collection
+            time.sleep(1)
             new_value = max6675.read_temp(cs)
             self.data_queue.put(new_value)
 
     def update_plot(self):
-        """Update the plot with new data from the queue."""
         if not self.is_running:
             return
 
         while not self.data_queue.empty():
-            # Get new data from the queue
             new_value = self.data_queue.get()
-            self.x_data.append(len(self.x_data))  # Time step
+            self.x_data.append(len(self.x_data))
             self.y_data.append(new_value)
 
             # Limit data to the last 5000 points
             self.x_data = self.x_data[-5000:]
             self.y_data = self.y_data[-5000:]
-            
-            # Update the line data
+
             x = self.x_data[-50:]
             y = self.y_data[-50:]
             self.line.set_xdata(x)
@@ -250,59 +236,11 @@ class TemperatureGraph(tk.Frame):
             min_y = min(y) - 5
             max_y = max(y) + 5
             self.ax.set_ylim(min_y, max_y)
-        
-        self.canvas.draw() # Redraw the canvas
-        self.after(100, self.update_plot) # Schedule the next update
 
+        self.canvas.draw()
+        self.after(100, self.update_plot)
 
-#class RelayController:
-#    def __init__(self, root):
-#        self.root = root
-#        self.root.title("Relay controller")
-#        self.root.attributes('-fullscreen', True)
-
-#        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
-#        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
-        
-#        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
-#        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
-
-#    def open_relay(self):
-#        GPIO.output(coil_relay_pin, GPIO.HIGH)
-
-#    def close_relay(self):
-#        GPIO.output(coil_relay_pin, GPIO.LOW)
-
-#class ExhaustController:
-#    def __init__(self, root):
-#        self.root = root
-#        self.root.title("Exhaust controller")
-#        self.root.attributes('-fullscreen', True)
-
-#        self.open_button = tk.Button(self.root, text="Open", command=self.open_relay)
-#        self.open_button.pack(side=tk.LEFT, padx=10, pady=10)
-
-#        self.close_button = tk.Button(self.root, text="Close", command=self.close_relay)
-#        self.close_button.pack(side=tk.LEFT, padx=10, pady=10)
-
-#    def open_relay(self):
-#        GPIO.output(exhaust_relay_pin, GPIO.HIGH)
-
-#    def close_relay(self):
-#        GPIO.output(exhaust_relay_pin, GPIO.LOW)
-# Create and run the Tkinter app
 if __name__ == "__main__":
-    #root = tk.Tk()
-    #ExhaustController(root)
-    #RealTimePlotApp(root)
-    #RelayController(root)
-    #root.mainloop()
-    #while True:
-    #    temperature = bme280.get_temperature()
-    #    pressure = bme280.get_pressure()
-    #    humidity = bme280.get_humidity()
-    #    print(f"{temperature:05.2f}°C {pressure:05.2f}hPa {humidity:05.2f}%")
-    #    time.sleep(1)
     app = App()
     app.start()
     app.mainloop()
