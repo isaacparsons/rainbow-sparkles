@@ -8,6 +8,7 @@ from pump_controller import PumpController
 from relay_controller import RelayController
 from bme280_status import BME280Status
 from temperature_graph import TemperatureGraph
+from pid import PID
 
 from queue import Queue
 import threading
@@ -26,12 +27,12 @@ coil_relay_pin = 13 # heating coil control
 pump_pin = 12
 
 # set the pin for communicate with MAX6675
-cs = 38
-sck = 40
-so = 36
+#cs = 38
+#sck = 40
+#so = 36
 
 # max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
-max6675.set_pin(cs, sck, so, 1)
+#max6675.set_pin(cs, sck, so, 1)
 
 class Status(tk.Frame):
     def __init__(self, parent, *args, **kwargs):

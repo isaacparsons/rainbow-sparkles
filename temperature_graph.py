@@ -68,17 +68,17 @@ class TemperatureGraph(tk.Frame):
             self.y_data.append(new_value)
 
             # Limit data to the last 5000 points
-            self.x_data = self.x_data[-5000:]
-            self.y_data = self.y_data[-5000:]
+            self.x_data = self.x_data[-1000:]
+            self.y_data = self.y_data[-1000:]
 
-            x = self.x_data[-50:]
-            y = self.y_data[-50:]
+            x = self.x_data[-100:]
+            y = self.y_data[-100:]
             self.line.set_xdata(x)
             self.line.set_ydata(y)
             self.ax.set_xlim(min(x), max(x))
 
-            min_y = min(y) - 5
-            max_y = max(y) + 5
+            min_y = min(y) - 1
+            max_y = max(y) + 1
             self.ax.set_ylim(min_y, max_y)
 
         self.canvas.draw()
