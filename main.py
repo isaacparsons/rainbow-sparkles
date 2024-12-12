@@ -18,7 +18,7 @@ from smbus2 import SMBus
 from bme280 import BME280
 
 GPIO.setmode(GPIO.BOARD)
-# bme 280
+
 bus = SMBus(1)
 bme280 = BME280(i2c_dev=bus)
 
@@ -26,13 +26,40 @@ exhaust_relay_pin = 15 # exhaust control
 coil_relay_pin = 13 # heating coil control
 pump_pin = 12
 
-# set the pin for communicate with MAX6675
-#cs = 38
-#sck = 40
-#so = 36
+cs = 38
+sck = 40
+so = 36
 
-# max6675.set_pin(CS, SCK, SO, unit)   [unit : 0 - raw, 1 - Celsius, 2 - Fahrenheit]
-#max6675.set_pin(cs, sck, so, 1)
+max6675.set_pin(cs, sck, so, 1) # 1 is for celsius
+
+
+class TemperatureDataPoint:
+    def __init__(self, timestamp, value):
+        self.timestamp = timestamp
+        self.value = value
+
+class DataCollection:
+    def __init__(self):
+        self.timestamp = 0
+        self.collection_interval = 1 
+        self.temperature_queue = Queue
+        self.running = False
+        self.data_thread = None
+
+    def start(self):
+        self.data_thread = threading.Thread(target=self.collect_data, daemon=True)
+        self.data_thread.start()
+
+    def collect_data(self):
+        while self.running:
+            time.sleep(self.collection_interval)
+            val = max6675.read_temp(cs)
+            self.temperature_queue.put(TemperatureDataPoint(self.timestamp, val))
+            self.timestamp += 1
+
+    def stop(self):
+        self.running = false
+
 
 class Status(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
